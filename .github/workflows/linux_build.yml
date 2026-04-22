@@ -1,23 +1,19 @@
+---
 name: Build Linux Static
-
 on:
   workflow_dispatch:
   push:
     branches:
-      - main
       - dev
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-
       - name: Cache ccache
         uses: actions/cache@v4
         with:
@@ -25,12 +21,11 @@ jobs:
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             ccache-${{ runner.os }}-
-
       - name: Build in Docker
         run: |
           mkdir -p .ccache
           chmod -R 777 .ccache
-          
+
           docker run --rm \
             -u 0:0 \
             -v "$GITHUB_WORKSPACE:/usr/src/tdesktop" \
@@ -45,30 +40,28 @@ jobs:
             -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
             -D CMAKE_C_COMPILER_LAUNCHER=ccache \
             -D CMAKE_CXX_COMPILER_LAUNCHER=ccache'"
-
       - name: Post-build Fixup
         run: sudo chmod -R 777 out/
-
       - name: Process Binary
         run: |
-          TARGET=$(find out -type f -executable -size +20M | head -n 1)
+          # Ищем файлы >20МБ и жестко фильтруем их через file на принадлежность к ELF-бинарникам
+          TARGET=$(find out -type f -executable -size +20M -exec sh -c 'file "$1" | grep -qi "ELF.*executable" && echo "$1"' _ {} \; | head -n 1)
+
           if [ -z "$TARGET" ]; then
-            echo "Binary not found, listing out/ directory:"
-            ls -R out/
+            echo "Исполняемый ELF-файл не найден. Содержимое out/Release:"
+            ls -la out/Release/ || true
             exit 1
           fi
-          
-          echo "Found binary: $TARGET"
-          
+
+          echo "Определен основной бинарник: $TARGET"
+
           sudo strip -s "$TARGET"
           sudo mv "$TARGET" ./AyuGram-Static
           sudo chmod 777 ./AyuGram-Static
-
       - name: Compress with UPX
         run: |
           sudo apt-get update && sudo apt-get install -y upx
           upx --best ./AyuGram-Static
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
