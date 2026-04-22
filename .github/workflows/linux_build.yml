@@ -23,7 +23,27 @@ jobs:
           path: .ccache
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
-            ccache-${{ runner.os }}-
+            ccache-${{ runner.os }}-      - name: Post-build Fixup
+        # Выдаем максимальные права на всю папку, игнорируя владельцев
+        run: sudo chmod -R 777 out/
+
+      - name: Process Binary
+        run: |
+          TARGET=$(find out -type f -executable -size +20M | head -n 1)
+          if [ -z "$TARGET" ]; then
+            echo "Файл не найден, вывожу список всего что собралось:"
+            ls -R out/
+            exit 1
+          fi
+          
+          echo "Определен основной бинарник: $TARGET"
+          
+          # Делаем strip и перенос от имени суперпользователя для 100% гарантии
+          sudo strip -s "$TARGET"
+          sudo mv "$TARGET" ./AyuGram-Static
+          
+          # Даем права на чтение финальному файлу, чтобы экшен загрузки смог его прочитать и сжать
+          sudo chmod 777 ./AyuGram-Static
 
       - name: Install dependencies
         run: pipx install poetry
@@ -48,22 +68,28 @@ jobs:
             -D CMAKE_C_COMPILER_LAUNCHER=ccache \
             -D CMAKE_CXX_COMPILER_LAUNCHER=ccache'"
             
+      - name: Post-build Fixup
+        # Выдаем максимальные права на всю папку, игнорируя владельцев
+        run: sudo chmod -R 777 out/
+
       - name: Process Binary
         run: |
-          # Ищем все исполняемые файлы, сортируем по размеру и берем самый большой
-          TARGET=$(find out -type f -executable -printf "%s %p\n" | sort -nr | head -n 1 | cut -d' ' -f2-)
-          
+          TARGET=$(find out -type f -executable -size +20M | head -n 1)
           if [ -z "$TARGET" ]; then
-            echo "Ни одного исполняемого файла не найдено!"
+            echo "Файл не найден, вывожу список всего что собралось:"
+            ls -R out/
             exit 1
           fi
           
           echo "Определен основной бинарник: $TARGET"
           
-          # Очищаем и переименовываем в фиксированное имя для UPX и Upload
-          strip -s "$TARGET"
-          mv "$TARGET" ./ayugram-binary
-
+          # Делаем strip и перенос от имени суперпользователя для 100% гарантии
+          sudo strip -s "$TARGET"
+          sudo mv "$TARGET" ./AyuGram-Static
+          
+          # Даем права на чтение финальному файлу, чтобы экшен загрузки смог его прочитать и сжать
+          sudo chmod 777 ./AyuGram-Static
+          
       - name: Compress with UPX
         run: |
           sudo apt-get update && sudo apt-get install -y upx
