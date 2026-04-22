@@ -48,28 +48,30 @@ jobs:
             -D CMAKE_C_COMPILER_LAUNCHER=ccache \
             -D CMAKE_CXX_COMPILER_LAUNCHER=ccache'"
             
-      - name: Post-build Fixup
-        run: sudo chown -R $USER:$USER out/
-
       - name: Process Binary
         run: |
-          # Находим бинарник и делаем strip
-          TARGET=$(find out -type f -name "Telegram" -executable | head -n 1)
-          if [ -z "$TARGET" ]; then exit 1; fi
-          strip -s "$TARGET"
+          # Ищем все исполняемые файлы, сортируем по размеру и берем самый большой
+          TARGET=$(find out -type f -executable -printf "%s %p\n" | sort -nr | head -n 1 | cut -d' ' -f2-)
           
-          # Переносим его в корень, чтобы путь был предсказуемым
-          mv "$TARGET" ./AyuGram-Static
+          if [ -z "$TARGET" ]; then
+            echo "Ни одного исполняемого файла не найдено!"
+            exit 1
+          fi
+          
+          echo "Определен основной бинарник: $TARGET"
+          
+          # Очищаем и переименовываем в фиксированное имя для UPX и Upload
+          strip -s "$TARGET"
+          mv "$TARGET" ./ayugram-binary
 
       - name: Compress with UPX
         run: |
           sudo apt-get update && sudo apt-get install -y upx
-          upx --best ./AyuGram-Static
+          upx --best ./ayugram-binary
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: AyuGram-Linux-Static
-          path: ./AyuGram-Static
+          path: ./ayugram-binary
           if-no-files-found: error
-          
