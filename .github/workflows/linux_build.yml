@@ -17,17 +17,25 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+
       - name: Install dependencies
         run: pipx install poetry
 
-      - name: Prepare build environment
-        run: ./Telegram/build/prepare/linux.sh
-
       - name: Build in Docker
         run: |
+          mkdir -p .ccache
           docker run --rm \
             -u $(id -u) \
             -v "$GITHUB_WORKSPACE:/usr/src/tdesktop" \
+            -v "$GITHUB_WORKSPACE/.ccache:/.ccache" \
+            -e CCACHE_DIR=/.ccache \
             ghcr.io/telegramdesktop/tdesktop/centos_env:latest \
             /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
             -D TDESKTOP_API_ID=2040 \
