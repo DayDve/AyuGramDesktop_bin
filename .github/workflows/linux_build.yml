@@ -31,8 +31,6 @@ jobs:
       - name: Build in Docker
         run: |
           mkdir -p .ccache
-          # Даем права на запись в папку кэша для всех, 
-          # чтобы избежать проблем с правами внутри контейнера
           chmod -R 777 .ccache 
           
           docker run --rm \
@@ -43,11 +41,13 @@ jobs:
             -e CCACHE_MAXSIZE=2G \
             ghcr.io/telegramdesktop/tdesktop/centos_env:latest \
             /bin/bash -c "yum install -y ccache && \
+            chown -R user:user /usr/src/tdesktop && \
             su user -c '/usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
             -D TDESKTOP_API_ID=2040 \
             -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
             -D CMAKE_C_COMPILER_LAUNCHER=ccache \
             -D CMAKE_CXX_COMPILER_LAUNCHER=ccache'"
+            
       - name: Strip binary
         run: |
           find out/Release -maxdepth 1 -name "Telegram" -type f -executable -exec strip -s {} +
