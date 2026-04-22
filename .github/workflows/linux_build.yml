@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - dev
 
 jobs:
@@ -23,35 +24,12 @@ jobs:
           path: .ccache
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
-            ccache-${{ runner.os }}-      - name: Post-build Fixup
-        # Выдаем максимальные права на всю папку, игнорируя владельцев
-        run: sudo chmod -R 777 out/
-
-      - name: Process Binary
-        run: |
-          TARGET=$(find out -type f -executable -size +20M | head -n 1)
-          if [ -z "$TARGET" ]; then
-            echo "Файл не найден, вывожу список всего что собралось:"
-            ls -R out/
-            exit 1
-          fi
-          
-          echo "Определен основной бинарник: $TARGET"
-          
-          # Делаем strip и перенос от имени суперпользователя для 100% гарантии
-          sudo strip -s "$TARGET"
-          sudo mv "$TARGET" ./AyuGram-Static
-          
-          # Даем права на чтение финальному файлу, чтобы экшен загрузки смог его прочитать и сжать
-          sudo chmod 777 ./AyuGram-Static
-
-      - name: Install dependencies
-        run: pipx install poetry
+            ccache-${{ runner.os }}-
 
       - name: Build in Docker
         run: |
           mkdir -p .ccache
-          chmod -R 777 .ccache 
+          chmod -R 777 .ccache
           
           docker run --rm \
             -u 0:0 \
@@ -67,37 +45,33 @@ jobs:
             -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
             -D CMAKE_C_COMPILER_LAUNCHER=ccache \
             -D CMAKE_CXX_COMPILER_LAUNCHER=ccache'"
-            
+
       - name: Post-build Fixup
-        # Выдаем максимальные права на всю папку, игнорируя владельцев
         run: sudo chmod -R 777 out/
 
       - name: Process Binary
         run: |
           TARGET=$(find out -type f -executable -size +20M | head -n 1)
           if [ -z "$TARGET" ]; then
-            echo "Файл не найден, вывожу список всего что собралось:"
+            echo "Binary not found, listing out/ directory:"
             ls -R out/
             exit 1
           fi
           
-          echo "Определен основной бинарник: $TARGET"
+          echo "Found binary: $TARGET"
           
-          # Делаем strip и перенос от имени суперпользователя для 100% гарантии
           sudo strip -s "$TARGET"
           sudo mv "$TARGET" ./AyuGram-Static
-          
-          # Даем права на чтение финальному файлу, чтобы экшен загрузки смог его прочитать и сжать
           sudo chmod 777 ./AyuGram-Static
-          
+
       - name: Compress with UPX
         run: |
           sudo apt-get update && sudo apt-get install -y upx
-          upx --best ./ayugram-binary
+          upx --best ./AyuGram-Static
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: AyuGram-Linux-Static
-          path: ./ayugram-binary
+          path: ./AyuGram-Static
           if-no-files-found: error
