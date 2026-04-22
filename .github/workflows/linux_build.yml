@@ -61,7 +61,7 @@ jobs:
       - name: Compress with UPX
         run: |
           sudo apt-get update && sudo apt-get install -y upx
-          upx --best ./AyuGram-Static
+          sudo upx --best ./AyuGram-Static
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
