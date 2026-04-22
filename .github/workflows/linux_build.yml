@@ -32,14 +32,17 @@ jobs:
         run: |
           mkdir -p .ccache
           docker run --rm \
-            -u $(id -u) \
+            -u $(id -u):$(id -g) \
             -v "$GITHUB_WORKSPACE:/usr/src/tdesktop" \
-            -v "$GITHUB_WORKSPACE/.ccache:/.ccache" \
-            -e CCACHE_DIR=/.ccache \
+            -v "$GITHUB_WORKSPACE/.ccache:/home/user/.ccache" \
+            -e CCACHE_DIR=/home/user/.ccache \
+            -e CCACHE_MAXSIZE=2G \
             ghcr.io/telegramdesktop/tdesktop/centos_env:latest \
             /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
             -D TDESKTOP_API_ID=2040 \
-            -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627
+            -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
+            -D CMAKE_C_COMPILER_LAUNCHER=ccache \
+            -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Strip binary
         run: |
