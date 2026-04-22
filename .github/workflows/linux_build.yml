@@ -48,19 +48,29 @@ jobs:
             -D CMAKE_C_COMPILER_LAUNCHER=ccache \
             -D CMAKE_CXX_COMPILER_LAUNCHER=ccache'"
             
-      - name: Strip binary
+      - name: Post-build Fixup
+        run: sudo chown -R $USER:$USER out/
+
+      - name: Locate and Process Binary
         run: |
-          find out/Release -maxdepth 1 -name "Telegram" -type f -executable -exec strip -s {} +
-      
+          TARGET_BIN=$(find out -type f -name "Telegram" -executable | head -n 1)
+          
+          if [ -z "$TARGET_BIN" ]; then
+            echo "!!! ОШИБКА: Бинарник не найден в папке out. Проверь логи сборки выше."
+            exit 1
+          fi
+          
+          echo "Нашел бинарник: $TARGET_BIN"
+          strip -s "$TARGET_BIN"
+          echo "TELEGRAM_PATH=$TARGET_BIN" >> $GITHUB_ENV
+
       - name: Compress with UPX
         run: |
           sudo apt-get update && sudo apt-get install -y upx
-          upx --best out/Release/Telegram
+          upx --best "${{ env.TELEGRAM_PATH }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: AyuGram-Linux-Static
-          # Указываем конкретный путь к релизному бинарнику
-          path: out/Release/Telegram
-          if-no-files-found: error
+          path: ${{ env.TELEGRAM_PATH }}    if-no-files-found: error
