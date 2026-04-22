@@ -42,10 +42,19 @@ jobs:
             -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627
 
       - name: Strip binary
-        run: find out -name "Telegram" -type f -executable -exec strip -s {} +
+        run: |
+          # Находим именно финальный файл и очищаем его от отладочной инфы
+          find out/Release -maxdepth 1 -name "Telegram" -type f -executable -exec strip -s {} +
+      
+      - name: Compress with UPX
+        run: |
+          sudo apt-get update && sudo apt-get install -y upx
+          upx --best out/Release/Telegram
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AyuGramDesktop-Linux
-          path: out/**/Telegram
+          name: AyuGram-Linux-Static
+          # Указываем конкретный путь к релизному бинарнику
+          path: out/Release/Telegram
+          if-no-files-found: error
