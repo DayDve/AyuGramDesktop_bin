@@ -51,26 +51,25 @@ jobs:
       - name: Post-build Fixup
         run: sudo chown -R $USER:$USER out/
 
-      - name: Locate and Process Binary
+      - name: Process Binary
         run: |
-          TARGET_BIN=$(find out -type f -name "Telegram" -executable | head -n 1)
+          # Находим бинарник и делаем strip
+          TARGET=$(find out -type f -name "Telegram" -executable | head -n 1)
+          if [ -z "$TARGET" ]; then exit 1; fi
+          strip -s "$TARGET"
           
-          if [ -z "$TARGET_BIN" ]; then
-            echo "!!! ОШИБКА: Бинарник не найден в папке out. Проверь логи сборки выше."
-            exit 1
-          fi
-          
-          echo "Нашел бинарник: $TARGET_BIN"
-          strip -s "$TARGET_BIN"
-          echo "TELEGRAM_PATH=$TARGET_BIN" >> $GITHUB_ENV
+          # Переносим его в корень, чтобы путь был предсказуемым
+          mv "$TARGET" ./AyuGram-Static
 
       - name: Compress with UPX
         run: |
           sudo apt-get update && sudo apt-get install -y upx
-          upx --best "${{ env.TELEGRAM_PATH }}"
+          upx --best ./AyuGram-Static
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: AyuGram-Linux-Static
-          path: ${{ env.TELEGRAM_PATH }}    if-no-files-found: error
+          path: ./AyuGram-Static
+          if-no-files-found: error
+          
