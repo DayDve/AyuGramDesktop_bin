@@ -58,6 +58,7 @@ jobs:
 
       - name: Process Binary
         run: |
+          ls -R out
           TARGET=$(find out -type f -executable -size +20M -exec sh -c 'file "$1" | grep -qi "ELF.*executable" && echo "$1"' _ {} \; | head -n 1)
           
           if [ -z "$TARGET" ]; then
@@ -66,7 +67,7 @@ jobs:
             exit 1
           fi
           
-          sudo strip -s "$TARGET"
+          # sudo strip -s "$TARGET" # Removed: it corrupts appended resources
           sudo mv "$TARGET" ./AyuGram
           sudo chmod 777 ./AyuGram
 
