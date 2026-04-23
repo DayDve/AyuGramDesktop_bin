@@ -25,7 +25,7 @@ jobs:
         run: |
           # Читаем версию из стандартного файла tdesktop
           if [ -f "Telegram/build/version" ]; then
-            VERSION=$(cat Telegram/build/version | tr -d '[:space:]')
+            VERSION=$(grep "AppVersionStr " Telegram/build/version | awk '{print $2}' | tr -d '[:space:]')
           else
             VERSION="unknown"
           fi
@@ -53,16 +53,8 @@ jobs:
             -u 0:0 \
             -v "$GITHUB_WORKSPACE:/usr/src/tdesktop" \
             -v "$GITHUB_WORKSPACE/.ccache:/home/user/.ccache" \
-            -e CCACHE_DIR=/home/user/.ccache \
-            -e CCACHE_MAXSIZE=2G \
             ghcr.io/telegramdesktop/tdesktop/centos_env:latest \
-            /bin/bash -c "yum install -y ccache && \
-            chown -R user:user /usr/src/tdesktop && \
-            su user -c '/usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
-            -D TDESKTOP_API_ID=2040 \
-            -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
-            -D CMAKE_C_COMPILER_LAUNCHER=ccache \
-            -D CMAKE_CXX_COMPILER_LAUNCHER=ccache'"
+            /usr/src/tdesktop/scripts/build_linux.sh
 
       - name: Process Binary
         run: |
