@@ -1,19 +1,41 @@
----
 name: Build Linux Static
+
 on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - dev
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Обязательно для создания релизов
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
+
+      - name: Extract Version
+        run: |
+          # Читаем версию из стандартного файла tdesktop
+          if [ -f "Telegram/build/version" ]; then
+            VERSION=$(cat Telegram/build/version | tr -d '[:space:]')
+          else
+            VERSION="unknown"
+          fi
+          
+          # Берем короткий хэш коммита для уникальности релиза
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          
+          echo "APP_VERSION=${VERSION}-${SHORT_SHA}" >> $GITHUB_ENV
+          echo "Текущая версия: ${VERSION}-${SHORT_SHA}"
+
       - name: Cache ccache
         uses: actions/cache@v4
         with:
@@ -21,11 +43,12 @@ jobs:
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             ccache-${{ runner.os }}-
+
       - name: Build in Docker
         run: |
           mkdir -p .ccache
           chmod -R 777 .ccache
-
+          
           docker run --rm \
             -u 0:0 \
             -v "$GITHUB_WORKSPACE:/usr/src/tdesktop" \
@@ -40,31 +63,32 @@ jobs:
             -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627 \
             -D CMAKE_C_COMPILER_LAUNCHER=ccache \
             -D CMAKE_CXX_COMPILER_LAUNCHER=ccache'"
-      - name: Post-build Fixup
-        run: sudo chmod -R 777 out/
+
       - name: Process Binary
         run: |
-          # Ищем файлы >20МБ и жестко фильтруем их через file на принадлежность к ELF-бинарникам
           TARGET=$(find out -type f -executable -size +20M -exec sh -c 'file "$1" | grep -qi "ELF.*executable" && echo "$1"' _ {} \; | head -n 1)
-
+          
           if [ -z "$TARGET" ]; then
             echo "Исполняемый ELF-файл не найден. Содержимое out/Release:"
             ls -la out/Release/ || true
             exit 1
           fi
-
-          echo "Определен основной бинарник: $TARGET"
-
+          
           sudo strip -s "$TARGET"
-          sudo mv "$TARGET" ./AyuGram-Static
-          sudo chmod 777 ./AyuGram-Static
-      - name: Compress with UPX
-        run: |
-          sudo apt-get update && sudo apt-get install -y upx
-          sudo upx --best ./AyuGram-Static
+          sudo mv "$TARGET" ./AyuGram
+          sudo chmod 777 ./AyuGram
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: AyuGram-Linux-Static
-          path: ./AyuGram-Static
+          path: ./AyuGram
           if-no-files-found: error
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v$APP_VERSION" ./AyuGram \
+            --title "AyuGram v$APP_VERSION" \
+            --notes "Static binary for Linux."
