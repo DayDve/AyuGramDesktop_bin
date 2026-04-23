@@ -28,3 +28,6 @@ su user -c '
   echo "--- Статистика ccache после сборки ---"
   ccache -s
 '
+
+# Возвращаем права на папку кэша, чтобы GitHub Actions мог её прочитать
+chown -R root:root /usr/src/tdesktop/.ccache
