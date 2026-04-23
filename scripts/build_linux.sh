@@ -16,6 +16,12 @@ su user -c '
   # Помогаем ccache дружить с Precompiled Headers
   export CCACHE_SLOPPINESS=pch_defines,time_macros
 
+  export CCACHE_BASEDIR=/usr/src/tdesktop
+  export CCACHE_DEPEND=1
+  
+  echo "--- Версия ccache ---"
+  ccache -V
+
   echo "--- Статистика ccache до сборки ---"
   ccache -s
 
