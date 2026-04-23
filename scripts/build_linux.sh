@@ -4,13 +4,13 @@ set -e
 echo "=== Подготовка окружения (root) ==="
 yum install -y ccache
 # Гарантируем права для пользователя на папку кэша и исходники
-mkdir -p /home/user/.ccache
-chown -R user:user /home/user/.ccache
+mkdir -p /usr/src/tdesktop/.ccache
+chown -R user:user /usr/src/tdesktop/.ccache
 chown -R user:user /usr/src/tdesktop
 
 echo "=== Запуск сборки (user) ==="
 su user -c '
-  export CCACHE_DIR=/home/user/.ccache
+  export CCACHE_DIR=/usr/src/tdesktop/.ccache
   export CCACHE_MAXSIZE=10G
   export CCACHE_COMPRESS=1
   # Помогаем ccache дружить с Precompiled Headers
