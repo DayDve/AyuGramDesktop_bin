@@ -86,10 +86,10 @@ jobs:
           sudo apt-get update && sudo apt-get install -y upx-ucl
           
           # Стрипаем символы (уменьшает размер)
-          strip -s ./AyuGram
+          sudo strip -s ./AyuGram
           
           # Сжимаем UPX-ом
-          upx --best ./AyuGram
+          sudo upx --best ./AyuGram
           
           echo "Final binary info:"
           ls -lh ./AyuGram
