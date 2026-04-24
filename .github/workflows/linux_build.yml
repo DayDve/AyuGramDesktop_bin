@@ -88,8 +88,8 @@ jobs:
           # Стрипаем символы (уменьшает размер)
           sudo strip -s ./AyuGram
           
-          # Сжимаем UPX-ом
-          sudo upx --best ./AyuGram
+          # Сжимаем UPX-ом (используем -6 для баланса скорости и потребления RAM)
+          sudo upx -6 ./AyuGram
           
           echo "Final binary info:"
           ls -lh ./AyuGram
