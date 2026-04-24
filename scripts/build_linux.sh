@@ -14,7 +14,8 @@ su user -c '
   export CCACHE_MAXSIZE=10G
   export CCACHE_COMPRESS=1
   # Помогаем ccache дружить с Precompiled Headers
-  export CCACHE_SLOPPINESS=pch_defines,time_macros
+  export CCACHE_SLOPPINESS=include_file_ctime,include_file_mtime,pch_defines,time_macros
+  export CCACHE_COMPILERCHECK=content
 
   export CCACHE_BASEDIR=/usr/src/tdesktop
   export CCACHE_DEPEND=1
