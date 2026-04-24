@@ -18,7 +18,9 @@ su user -c '
   export CCACHE_COMPILERCHECK=content
 
   export CCACHE_BASEDIR=/usr/src/tdesktop
-  export CCACHE_DEPEND=1
+  export CCACHE_NOHASHDIR=1
+  export CCACHE_CPP2=1
+  export CCACHE_LOGFILE=/usr/src/tdesktop/ccache.log
   
   echo "--- Версия ccache ---"
   ccache -V
@@ -34,6 +36,9 @@ su user -c '
 
   echo "--- Статистика ccache после сборки ---"
   ccache -s
+  
+  echo "--- Фрагмент ccache.log (причины промахов) ---"
+  tail -n 50 /usr/src/tdesktop/ccache.log
 '
 
 # Возвращаем права на папку кэша, чтобы GitHub Actions мог её прочитать
