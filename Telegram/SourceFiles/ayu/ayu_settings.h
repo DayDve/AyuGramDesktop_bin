@@ -45,6 +45,12 @@ enum class TranslationProvider {
 	Native = 3,
 };
 
+enum class SendWithoutSoundOption {
+	Never = 0,
+	InGhostMode = 1,
+	Always = 2,
+};
+
 NLOHMANN_JSON_SERIALIZE_ENUM(PeerIdDisplay, {
 	{PeerIdDisplay::Hidden, 0},
 	{PeerIdDisplay::TelegramApi, 1},
@@ -70,6 +76,12 @@ NLOHMANN_JSON_SERIALIZE_ENUM(TranslationProvider, {
 	{TranslationProvider::Native, "native"},
 })
 
+NLOHMANN_JSON_SERIALIZE_ENUM(SendWithoutSoundOption, {
+	{SendWithoutSoundOption::Never, 0},
+	{SendWithoutSoundOption::InGhostMode, 1},
+	{SendWithoutSoundOption::Always, 2},
+})
+
 class GhostModeAccountSettings {
 public:
 	GhostModeAccountSettings();
@@ -81,7 +93,9 @@ public:
 	[[nodiscard]] bool sendOfflinePacketAfterOnline() const { return _sendOfflinePacketAfterOnline.current(); }
 	[[nodiscard]] bool markReadAfterAction() const { return _markReadAfterAction.current(); }
 	[[nodiscard]] bool useScheduledMessages() const { return _useScheduledMessages.current(); }
-	[[nodiscard]] bool sendWithoutSound() const { return _sendWithoutSound.current(); }
+	[[nodiscard]] SendWithoutSoundOption sendWithoutSound() const { return _sendWithoutSound.current(); }
+	[[nodiscard]] bool shouldSendWithoutSound() const;
+	[[nodiscard]] bool suggestGhostModeBeforeViewingStory() const { return _suggestGhostModeBeforeViewingStory.current(); }
 	[[nodiscard]] bool isGhostModeActive() const { return _ghostModeActive.current(); }
 	[[nodiscard]] bool isUseScheduledMessages() const { return isGhostModeActive() && useScheduledMessages(); }
 
@@ -98,7 +112,8 @@ public:
 	void setSendOfflinePacketAfterOnline(bool val);
 	void setMarkReadAfterAction(bool val);
 	void setUseScheduledMessages(bool val);
-	void setSendWithoutSound(bool val);
+	void setSendWithoutSound(SendWithoutSoundOption val);
+	void setSuggestGhostModeBeforeViewingStory(bool val);
 	void setGhostModeEnabled(bool val);
 
 	void setSendReadMessagesLocked(bool val);
@@ -121,8 +136,10 @@ public:
 	[[nodiscard]] rpl::producer<bool> markReadAfterActionChanges() const { return _markReadAfterAction.changes(); }
 	[[nodiscard]] rpl::producer<bool> useScheduledMessagesValue() const { return _useScheduledMessages.value(); }
 	[[nodiscard]] rpl::producer<bool> useScheduledMessagesChanges() const { return _useScheduledMessages.changes(); }
-	[[nodiscard]] rpl::producer<bool> sendWithoutSoundValue() const { return _sendWithoutSound.value(); }
-	[[nodiscard]] rpl::producer<bool> sendWithoutSoundChanges() const { return _sendWithoutSound.changes(); }
+	[[nodiscard]] rpl::producer<SendWithoutSoundOption> sendWithoutSoundValue() const { return _sendWithoutSound.value(); }
+	[[nodiscard]] rpl::producer<SendWithoutSoundOption> sendWithoutSoundChanges() const { return _sendWithoutSound.changes(); }
+	[[nodiscard]] rpl::producer<bool> suggestGhostModeBeforeViewingStoryValue() const { return _suggestGhostModeBeforeViewingStory.value(); }
+	[[nodiscard]] rpl::producer<bool> suggestGhostModeBeforeViewingStoryChanges() const { return _suggestGhostModeBeforeViewingStory.changes(); }
 	[[nodiscard]] rpl::producer<bool> ghostModeActiveValue() const { return _ghostModeActive.value(); }
 	[[nodiscard]] rpl::producer<bool> ghostModeActiveChanges() const { return _ghostModeActive.changes(); }
 
@@ -150,7 +167,8 @@ private:
 	rpl::variable<bool> _sendOfflinePacketAfterOnline = false;
 	rpl::variable<bool> _markReadAfterAction = true;
 	rpl::variable<bool> _useScheduledMessages = false;
-	rpl::variable<bool> _sendWithoutSound = false;
+	rpl::variable<SendWithoutSoundOption> _sendWithoutSound = SendWithoutSoundOption::Never;
+	rpl::variable<bool> _suggestGhostModeBeforeViewingStory = true;
 	rpl::variable<bool> _ghostModeActive = false;
 
 	rpl::variable<bool> _sendReadMessagesLocked = false;
@@ -168,6 +186,7 @@ public:
 	[[nodiscard]] bool showBackground() const { return _showBackground.current(); }
 	[[nodiscard]] bool showDate() const { return _showDate.current(); }
 	[[nodiscard]] bool showReactions() const { return _showReactions.current(); }
+	[[nodiscard]] bool showHeaderDecorations() const { return _showHeaderDecorations.current(); }
 	[[nodiscard]] bool showColorfulReplies() const { return _showColorfulReplies.current(); }
 	[[nodiscard]] bool revealSpoilers() const { return _revealSpoilers.current(); }
 	[[nodiscard]] int embeddedThemeType() const { return _embeddedThemeType.current(); }
@@ -181,6 +200,7 @@ public:
 	void setShowBackground(bool val);
 	void setShowDate(bool val);
 	void setShowReactions(bool val);
+	void setShowHeaderDecorations(bool val);
 	void setShowColorfulReplies(bool val);
 	void setRevealSpoilers(bool val);
 
@@ -199,6 +219,7 @@ private:
 	rpl::variable<bool> _showBackground = true;
 	rpl::variable<bool> _showDate = false;
 	rpl::variable<bool> _showReactions = false;
+	rpl::variable<bool> _showHeaderDecorations = true;
 	rpl::variable<bool> _showColorfulReplies = true;
 	rpl::variable<bool> _revealSpoilers = true;
 
@@ -316,6 +337,7 @@ public:
 	[[nodiscard]] bool hideAllChatsFolder() const { return _hideAllChatsFolder.current(); }
 	[[nodiscard]] ChannelBottomButton channelBottomButton() const { return _channelBottomButton.current(); }
 	[[nodiscard]] bool quickAdminShortcuts() const { return _quickAdminShortcuts.current(); }
+	[[nodiscard]] bool disableGreetingSticker() const { return _disableGreetingSticker.current(); }
 	[[nodiscard]] PeerIdDisplay showPeerId() const { return _showPeerId.current(); }
 	[[nodiscard]] bool showMessageSeconds() const { return _showMessageSeconds.current(); }
 	[[nodiscard]] bool showMessageShot() const { return _showMessageShot.current(); }
@@ -400,6 +422,7 @@ public:
 	void setHideAllChatsFolder(bool val);
 	void setChannelBottomButton(ChannelBottomButton val);
 	void setQuickAdminShortcuts(bool val);
+	void setDisableGreetingSticker(bool val);
 	void setShowPeerId(PeerIdDisplay val);
 	void setShowMessageSeconds(bool val);
 	void setShowMessageShot(bool val);
@@ -556,6 +579,8 @@ public:
 	[[nodiscard]] rpl::producer<ChannelBottomButton> channelBottomButtonChanges() const { return _channelBottomButton.changes(); }
 	[[nodiscard]] rpl::producer<bool> quickAdminShortcutsValue() const { return _quickAdminShortcuts.value(); }
 	[[nodiscard]] rpl::producer<bool> quickAdminShortcutsChanges() const { return _quickAdminShortcuts.changes(); }
+	[[nodiscard]] rpl::producer<bool> disableGreetingStickerValue() const { return _disableGreetingSticker.value(); }
+	[[nodiscard]] rpl::producer<bool> disableGreetingStickerChanges() const { return _disableGreetingSticker.changes(); }
 	[[nodiscard]] rpl::producer<PeerIdDisplay> showPeerIdValue() const { return _showPeerId.value(); }
 	[[nodiscard]] rpl::producer<PeerIdDisplay> showPeerIdChanges() const { return _showPeerId.changes(); }
 	[[nodiscard]] rpl::producer<bool> showMessageSecondsValue() const { return _showMessageSeconds.value(); }
@@ -601,7 +626,7 @@ private:
 	rpl::variable<bool> _semiTransparentDeletedMessages = false;
 	rpl::variable<bool> _disableAds = true;
 	rpl::variable<bool> _disableStories = false;
-	rpl::variable<bool> _disableCustomBackgrounds = true;
+	rpl::variable<bool> _disableCustomBackgrounds = false;
 	rpl::variable<bool> _showOnlyAddedEmojisAndStickers = false;
 	rpl::variable<bool> _collapseSimilarChannels = true;
 	rpl::variable<bool> _hideSimilarChannels = false;
@@ -662,10 +687,11 @@ private:
 	rpl::variable<bool> _hideAllChatsFolder = false;
 	rpl::variable<ChannelBottomButton> _channelBottomButton = ChannelBottomButton::DiscussWithFallback;
 	rpl::variable<bool> _quickAdminShortcuts = true;
+	rpl::variable<bool> _disableGreetingSticker = false;
 	rpl::variable<PeerIdDisplay> _showPeerId = PeerIdDisplay::BotApi;
 	rpl::variable<bool> _showMessageSeconds = false;
 	rpl::variable<bool> _showMessageShot = true;
-	rpl::variable<bool> _filterZalgo = true;
+	rpl::variable<bool> _filterZalgo = false;
 	rpl::variable<bool> _stickerConfirmation = false;
 	rpl::variable<bool> _gifConfirmation = false;
 	rpl::variable<bool> _voiceConfirmation = false;
