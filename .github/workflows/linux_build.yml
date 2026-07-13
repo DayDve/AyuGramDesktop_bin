@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: dev
     permissions:
       contents: write
 
@@ -81,15 +82,8 @@ jobs:
           sudo cp "$BINARY" ./AyuGram
           sudo chmod 777 ./AyuGram
           
-          echo "--- Сжатие бинарника ---"
-          # Устанавливаем UPX если его нет
-          sudo apt-get update && sudo apt-get install -y upx-ucl
-          
           # Стрипаем символы (уменьшает размер)
           sudo strip -s ./AyuGram
-          
-          # Сжимаем UPX-ом (используем -6 для баланса скорости и потребления RAM)
-          sudo upx -6 ./AyuGram
           
           echo "Final binary info:"
           ls -lh ./AyuGram
@@ -109,3 +103,30 @@ jobs:
           gh release create "v$APP_VERSION" ./AyuGram \
             --title "AyuGram v$APP_VERSION" \
             --notes "Static binary for Linux."
+
+      - name: Notify Success
+        if: success()
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: |
+          curl -s -F "chat_id=$TG_CHAT_ID" \
+            -F "document=@./AyuGram" \
+            -F "caption=AyuGram v$APP_VERSION — Linux build succeeded" \
+            "https://api.telegram.org/bot$TG_TOKEN/sendDocument"
+
+      - name: Notify Failure
+        if: failure()
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: |
+          TEXT=$(printf '%s\n' \
+            '❌ AyuGram Linux build failed' \
+            "Workflow: ${{ github.workflow }}" \
+            "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            "Branch: ${{ github.ref_name }}" \
+            "Commit: ${{ github.sha }}")
+          curl -s -F "chat_id=$TG_CHAT_ID" \
+            -F "text=$TEXT" \
+            "https://api.telegram.org/bot$TG_TOKEN/sendMessage"
