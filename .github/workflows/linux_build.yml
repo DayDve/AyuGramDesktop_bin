@@ -110,10 +110,17 @@ jobs:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
-          curl -s -F "chat_id=$TG_CHAT_ID" \
-            -F "document=@./AyuGram" \
-            -F "caption=AyuGram v$APP_VERSION — Linux build succeeded" \
-            "https://api.telegram.org/bot$TG_TOKEN/sendDocument"
+          if [ ! -f ./AyuGram ]; then
+            echo "AyuGram binary not found, sending notification without file..."
+            curl -sS --fail -F "chat_id=$TG_CHAT_ID" \
+              -F "text=AyuGram v$APP_VERSION — Linux build succeeded (binary not available)" \
+              "https://api.telegram.org/bot$TG_TOKEN/sendMessage"
+          else
+            curl -sS --fail -F "chat_id=$TG_CHAT_ID" \
+              -F "document=@./AyuGram" \
+              -F "caption=AyuGram v$APP_VERSION — Linux build succeeded" \
+              "https://api.telegram.org/bot$TG_TOKEN/sendDocument"
+          fi
 
       - name: Notify Failure
         if: failure()
@@ -127,6 +134,6 @@ jobs:
             "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             "Branch: ${{ github.ref_name }}" \
             "Commit: ${{ github.sha }}")
-          curl -s -F "chat_id=$TG_CHAT_ID" \
+          curl -sS --fail -F "chat_id=$TG_CHAT_ID" \
             -F "text=$TEXT" \
             "https://api.telegram.org/bot$TG_TOKEN/sendMessage"
